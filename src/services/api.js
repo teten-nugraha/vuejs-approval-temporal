@@ -6,13 +6,11 @@ const apiClient = axios.create({
 })
 
 export default {
-    // Master User & Order
     getUsers() { return apiClient.get('/users') },
     getOrders() { return apiClient.get('/orders') },
     getOrderState(orderId) { return apiClient.get(`/orders/${orderId}`) },
     createOrder(payload) { return apiClient.post('/orders', payload) },
 
-    // FITUR: Pick Me & Release
     claimOrder(orderId, approverId) {
         return apiClient.post(`/orders/${orderId}/claim`, { approverId })
     },
@@ -20,8 +18,12 @@ export default {
         return apiClient.post(`/orders/${orderId}/release`, { approverId })
     },
 
-    // Keputusan Approval
     submitDecision(orderId, payload) {
         return apiClient.post(`/orders/${orderId}/decision`, payload)
+    },
+
+    // FITUR CANCEL
+    cancelOrder(orderId, requesterId, reason) {
+        return apiClient.post(`/orders/${orderId}/cancel`, { requesterId, reason })
     }
 }

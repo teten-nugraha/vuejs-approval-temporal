@@ -15,7 +15,6 @@
       </div>
     </div>
 
-    <!-- Table Card -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div v-if="loading" class="p-8 text-center text-sm text-slate-500">
         Memuat data pengajuan dari Database H2...
@@ -28,6 +27,7 @@
           <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-xs font-semibold">
             <tr>
               <th class="px-6 py-4">ID Order</th>
+              <th class="px-6 py-4">Pemohon</th>
               <th class="px-6 py-4">Tipe & Nilai</th>
               <th class="px-6 py-4">Approval Chain</th>
               <th class="px-6 py-4">Menunggu Role</th>
@@ -39,6 +39,7 @@
           <tbody class="divide-y divide-slate-100">
             <tr v-for="order in orders" :key="order.orderId" class="hover:bg-slate-50 transition">
               <td class="px-6 py-4 font-semibold text-slate-900">#{{ order.orderId }}</td>
+              <td class="px-6 py-4 text-slate-700">{{ order.requesterId }}</td>
               <td class="px-6 py-4">
                 <div class="font-medium text-slate-800">
                   <span v-if="order.type === 'BUY'">Rp {{ Number(order.amount).toLocaleString('id-ID') }}</span>
@@ -56,7 +57,6 @@
                 </span>
                 <span v-else class="text-slate-400 text-xs">—</span>
               </td>
-              <!-- Kolom Status Klaim (Pick Me) -->
               <td class="px-6 py-4 text-xs">
                 <span v-if="order.claimedByName" class="inline-flex items-center gap-1 font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
                   🔒 {{ order.claimedByName }}
@@ -73,7 +73,7 @@
               </td>
               <td class="px-6 py-4 text-center">
                 <router-link :to="'/detail/' + order.orderId" class="text-blue-600 hover:text-blue-800 font-bold text-xs">
-                  Detail & Review &rarr;
+                  Detail &rarr;
                 </router-link>
               </td>
             </tr>
@@ -94,6 +94,7 @@ const loading = ref(true)
 function statusBadge(status) {
   if (status === 'APPROVED') return 'bg-emerald-50 text-emerald-700 border-emerald-200'
   if (status === 'REJECTED') return 'bg-rose-50 text-rose-700 border-rose-200'
+  if (status === 'CANCELLED') return 'bg-slate-100 text-slate-600 border-slate-300'
   return 'bg-amber-50 text-amber-700 border-amber-200'
 }
 

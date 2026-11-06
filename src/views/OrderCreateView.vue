@@ -108,7 +108,7 @@ async function handleSubmit() {
   try {
     await api.createOrder({
       orderId: form.orderId,
-      requesterId: props.currentUser.name,
+      requesterId: props.currentUser.id, // <-- Gunakan .id (bukan .name)
       type: form.type,
       amount: form.type === 'BUY' ? form.amount : null,
       days: form.type === 'IJIN_CUTI' ? form.days : null,
@@ -116,7 +116,7 @@ async function handleSubmit() {
     })
     router.push('/detail/' + form.orderId)
   } catch (err) {
-    alert('Gagal membuat pengajuan: ' + (err.response?.data?.message || err.message))
+    alert('Gagal: ' + err.message)
   } finally {
     submitting.value = false
   }

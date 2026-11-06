@@ -19,7 +19,12 @@
       <!-- Stepper Tracking -->
       <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <h2 class="text-xs font-bold uppercase text-slate-400 mb-6">Tahapan Approval Berjenjang</h2>
-        <div class="flex items-center justify-between relative px-4">
+
+        <div v-if="order.status === 'CANCELLED'" class="p-4 bg-slate-100 border border-slate-200 rounded-lg text-center">
+          <span class="text-xs font-bold text-slate-600 uppercase">Workflow Dihentikan (Dibatalkan oleh Pemohon)</span>
+        </div>
+
+        <div v-else class="flex items-center justify-between relative px-4">
           <div class="absolute left-10 right-10 top-4 h-0.5 bg-slate-200 -z-0"></div>
 
           <!-- Auto Approved Case -->
@@ -49,15 +54,21 @@
         </div>
       </div>
 
-      <!-- Info Card & Action Reviewer -->
+      <!-- Grid Info Permohonan & Action Reviewer -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
         <!-- Info Permohonan -->
         <div class="md:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <h3 class="font-bold text-slate-900 border-b pb-3">Informasi Permohonan</h3>
+          <div class="flex justify-between items-center border-b pb-3">
+            <h3 class="font-bold text-slate-900">Informasi Permohonan</h3>
+            <span :class="statusBadge(order.status)" class="px-2.5 py-1 rounded-full text-xs font-semibold border">
+              {{ order.status }}
+            </span>
+          </div>
+
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span class="text-xs text-slate-400 block">Pemohon</span>
+              <span class="text-xs text-slate-400 block">Pemohon Pertama</span>
               <span class="font-semibold text-slate-800">{{ order.requesterId }}</span>
             </div>
             <div>
@@ -83,6 +94,21 @@
             <p class="text-sm bg-slate-50 p-3 rounded-lg border text-slate-700">{{ order.notes }}</p>
           </div>
 
+          <!-- FITUR PEMBATALAN OLEH PEMOHON PERTAMA -->
+          <div v-if="isRequester && order.status === 'IN_PROGRESS'" class="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between mt-4">
+            <div>
+              <h4 class="text-xs font-bold text-rose-800">Area Pemohon (Requester Actions)</h4>
+              <p class="text-[11px] text-rose-600">Sebagai pembuat order, Anda memiliki hak untuk membatalkan pengajuan ini sebelum disetujui.</p>
+            </div>
+            <button
+              @click="handleCancel"
+              :disabled="actionLoading"
+              class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow transition"
+            >
+              ✕ Batalkan Pengajuan
+            </button>
+          </div>
+
           <!-- History Approval -->
           <div class="pt-4 border-t">
             <span class="text-xs font-bold text-slate-400 block mb-2 uppercase">Log Riwayat Keputusan</span>
@@ -99,19 +125,23 @@
           </div>
         </div>
 
-        <!-- Reviewer Action Box (Dengan Mekanisme Pick Me) -->
+        <!-- Reviewer Action Box -->
         <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
             <h3 class="font-bold text-slate-900 mb-1">Aksi Reviewer</h3>
             <p class="text-xs text-slate-500 mb-4">
-              Anda login sebagai: <br>
+              Login sebagai: <br>
               <strong>{{ currentUser.name }}</strong> (<span class="text-blue-600 font-bold">{{ currentUser.role }}</span>)
             </p>
 
-            <!-- KONDISI 1: Belum Selesai & Role Cocok, tetapi BELUM di-Pick Me -->
-            <div v-if="canPickMe" class="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+            <div v-if="order.status === 'CANCELLED'" class="p-3 bg-slate-50 border rounded-lg text-xs text-slate-500">
+              Pengajuan ini telah <strong>Dibatalkan</strong> oleh pemohon. Tidak ada tindakan lebih lanjut.
+            </div>
+
+            <!-- Kondisi Belum di-Pick Me -->
+            <div v-else-if="canPickMe" class="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
               <p class="text-xs text-amber-800 leading-relaxed">
-                Order ini sedang menunggu persetujuan dari <strong>{{ order.waitingForRole }}</strong>. Anda harus melakukan <strong>Pick Me</strong> terlebih dahulu sebelum mengambil keputusan.
+                Order menunggu persetujuan <strong>{{ order.waitingForRole }}</strong>. Lakukan Pick Me terlebih dahulu sebelum mengambil keputusan.
               </p>
               <button
                 @click="handleClaim"
@@ -123,7 +153,7 @@
               </button>
             </div>
 
-            <!-- KONDISI 2: Sudah di-Pick Me oleh User yang Sedang Login -->
+            <!-- Kondisi Sudah di-Pick Me oleh User yang Login -->
             <div v-else-if="isClaimedByCurrentUser" class="space-y-3">
               <div class="flex items-center justify-between bg-indigo-50 border border-indigo-200 p-2.5 rounded-lg text-xs">
                 <span class="font-bold text-indigo-900">🔒 Anda pemegang order ini</span>
@@ -138,20 +168,18 @@
               </div>
             </div>
 
-            <!-- KONDISI 3: Sudah di-Pick Me oleh Orang Lain di Role yang Sama -->
+            <!-- Kondisi Sudah di-Pick Me oleh Orang Lain -->
             <div v-else-if="isClaimedByOther" class="p-3 bg-slate-50 border rounded-lg text-xs text-slate-600 leading-relaxed">
-              ⚠️ Order ini sedang <strong>dikunci / diproses oleh {{ order.claimedByName }}</strong>. Anda tidak dapat melakukan keputusan kecuali rekan Anda melepaskan klaimnya.
+              ⚠️ Order sedang <strong>dikunci oleh {{ order.claimedByName }}</strong>. Anda tidak dapat melakukan keputusan.
             </div>
 
-            <!-- KONDISI 4: Role Pengguna Tidak Cocok / Sudah Selesai -->
             <div v-else class="p-3 bg-slate-50 rounded-lg text-xs text-slate-500">
               <span v-if="order.status !== 'IN_PROGRESS'">Pengajuan ini sudah <strong>{{ order.status }}</strong>.</span>
-              <span v-else>Tahapan ini membutuhkan role <strong class="text-amber-600">{{ order.waitingForRole }}</strong>. Silakan ubah akun login di kanan atas.</span>
+              <span v-else>Tahapan ini membutuhkan role <strong class="text-amber-600">{{ order.waitingForRole }}</strong>.</span>
             </div>
           </div>
 
-          <!-- Tombol Approve / Reject HANYA MUNCUL jika User Berhasil Klaim -->
-          <div v-if="isClaimedByCurrentUser" class="space-y-2 pt-4 border-t mt-4">
+          <div v-if="isClaimedByCurrentUser && order.status === 'IN_PROGRESS'" class="space-y-2 pt-4 border-t mt-4">
             <button @click="handleDecision(true)" :disabled="actionLoading" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow transition">
               ✓ Setujui (Approve)
             </button>
@@ -195,7 +223,13 @@ async function loadData() {
   }
 }
 
-// Logika Validasi Pick Me
+// Cek apakah user saat ini adalah pemohon pertama
+const isRequester = computed(() => {
+  if (!order.value || !props.currentUser) return false
+  return order.value.requesterId === props.currentUser.id ||
+         order.value.requesterId === props.currentUser.name
+})
+
 const isRoleMatch = computed(() => {
   return order.value && order.value.status === 'IN_PROGRESS' && props.currentUser.role === order.value.waitingForRole
 })
@@ -229,7 +263,30 @@ function getStepStatusLabel(idx) {
   return 'Pending'
 }
 
-// Aksi Pick Me (Claim)
+function statusBadge(status) {
+  if (status === 'APPROVED') return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+  if (status === 'REJECTED') return 'bg-rose-50 text-rose-700 border-rose-200'
+  if (status === 'CANCELLED') return 'bg-slate-100 text-slate-600 border-slate-300'
+  return 'bg-amber-50 text-amber-700 border-amber-200'
+}
+
+// Handle Cancel Pengajuan
+async function handleCancel() {
+  const reason = prompt("Masukkan alasan pembatalan:")
+  if (reason === null) return
+
+  actionLoading.value = true
+  try {
+    await api.cancelOrder(orderId, props.currentUser.id, reason || "Dibatalkan oleh pemohon")
+    alert("Pengajuan berhasil dibatalkan.")
+    await loadData()
+  } catch (err) {
+    alert(err.response?.data?.error || err.message)
+  } finally {
+    actionLoading.value = false
+  }
+}
+
 async function handleClaim() {
   actionLoading.value = true
   try {
@@ -242,7 +299,6 @@ async function handleClaim() {
   }
 }
 
-// Aksi Lepas Klaim (Release)
 async function handleRelease() {
   actionLoading.value = true
   try {
@@ -255,7 +311,6 @@ async function handleRelease() {
   }
 }
 
-// Aksi Approve / Reject
 async function handleDecision(approved) {
   actionLoading.value = true
   try {
