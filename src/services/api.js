@@ -6,11 +6,21 @@ const apiClient = axios.create({
 })
 
 export default {
-    getUsers() { return apiClient.get('/users') },
-    getOrders() { return apiClient.get('/orders') },
-    getOrderState(orderId) { return apiClient.get(`/orders/${orderId}`) },
-    createOrder(payload) { return apiClient.post('/orders', payload) },
+    // Master User & Order
+    getUsers() {
+        return apiClient.get('/users')
+    },
+    getOrders() {
+        return apiClient.get('/orders')
+    },
+    getOrderState(orderId) {
+        return apiClient.get(`/orders/${orderId}`)
+    },
+    createOrder(payload) {
+        return apiClient.post('/orders', payload)
+    },
 
+    // Fitur Pick Me & Release
     claimOrder(orderId, approverId) {
         return apiClient.post(`/orders/${orderId}/claim`, { approverId })
     },
@@ -18,12 +28,22 @@ export default {
         return apiClient.post(`/orders/${orderId}/release`, { approverId })
     },
 
+    // Keputusan Approval Parent
     submitDecision(orderId, payload) {
         return apiClient.post(`/orders/${orderId}/decision`, payload)
     },
 
-    // FITUR CANCEL
+    // Fitur Cancel (Khusus Pemohon Pertama)
     cancelOrder(orderId, requesterId, reason) {
         return apiClient.post(`/orders/${orderId}/cancel`, { requesterId, reason })
+    },
+
+    // Keputusan Approval Child Workflow (2 Direktur Berbeda)
+    submitChildDirectorDecision(orderId, approverId, approved, notes) {
+        return apiClient.post(`/orders/${orderId}/child-director-approve`, {
+            approverId,
+            approved,
+            notes
+        })
     }
 }

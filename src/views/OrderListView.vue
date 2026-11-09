@@ -3,10 +3,10 @@
     <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
       <div>
         <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Daftar Pengajuan Order</h1>
-        <p class="text-sm text-slate-500">Data tersinkronisasi real-time dengan Database H2 & Temporal</p>
+        <p class="text-sm text-slate-500">Data tersinkronisasi real-time dengan Database H2 & Temporal Engine</p>
       </div>
       <div class="flex gap-2">
-        <button @click="fetchOrders" class="px-3 py-2 border border-slate-300 text-xs font-semibold rounded-lg hover:bg-slate-100">
+        <button @click="fetchOrders" class="px-3 py-2 border border-slate-300 text-xs font-semibold rounded-lg hover:bg-slate-100 transition">
           🔄 Refresh
         </button>
         <router-link to="/create" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg shadow-sm transition">
@@ -15,6 +15,7 @@
       </div>
     </div>
 
+    <!-- Table Container -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div v-if="loading" class="p-8 text-center text-sm text-slate-500">
         Memuat data pengajuan dari Database H2...
@@ -38,25 +39,36 @@
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-for="order in orders" :key="order.orderId" class="hover:bg-slate-50 transition">
-              <td class="px-6 py-4 font-semibold text-slate-900">#{{ order.orderId }}</td>
-              <td class="px-6 py-4 text-slate-700">{{ order.requesterId }}</td>
+              <td class="px-6 py-4 font-semibold text-slate-900 font-mono">#{{ order.orderId }}</td>
+              <td class="px-6 py-4 text-slate-700 font-medium">{{ order.requesterId }}</td>
+
               <td class="px-6 py-4">
-                <div class="font-medium text-slate-800">
-                  <span v-if="order.type === 'BUY'">Rp {{ Number(order.amount).toLocaleString('id-ID') }}</span>
+                <div class="font-bold" :class="order.type === 'BUY_LAMBORGHINI' ? 'text-amber-900 text-sm' : 'text-slate-800'">
+                  <span v-if="order.type === 'BUY_LAMBORGHINI'">🏎️ Rp 1.000.000.000</span>
+                  <span v-else-if="order.type === 'BUY'">Rp {{ Number(order.amount).toLocaleString('id-ID') }}</span>
                   <span v-else>{{ order.days }} Hari Cuti</span>
                 </div>
-                <span class="text-[10px] text-slate-400 font-semibold">{{ order.type }}</span>
+                <span
+                  class="text-[10px] font-bold px-2 py-0.5 rounded mt-1 inline-block"
+                  :class="order.type === 'BUY_LAMBORGHINI' ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'text-slate-500 bg-slate-100'"
+                >
+                  {{ order.type }}
+                </span>
               </td>
+
               <td class="px-6 py-4 text-xs font-mono text-slate-600">
                 <span v-if="!order.approvalChain || order.approvalChain.length === 0" class="text-slate-400">Auto Approved</span>
                 <span v-else>{{ order.approvalChain.join(' ➔ ') }}</span>
               </td>
+
               <td class="px-6 py-4">
                 <span v-if="order.waitingForRole" class="font-bold text-amber-700 text-xs bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
                   {{ order.waitingForRole }}
                 </span>
                 <span v-else class="text-slate-400 text-xs">—</span>
               </td>
+
+              <!-- Status Pick Me -->
               <td class="px-6 py-4 text-xs">
                 <span v-if="order.claimedByName" class="inline-flex items-center gap-1 font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
                   🔒 {{ order.claimedByName }}
@@ -66,11 +78,14 @@
                 </span>
                 <span v-else class="text-slate-400">—</span>
               </td>
+
+              <!-- Status Workflow -->
               <td class="px-6 py-4">
                 <span :class="statusBadge(order.status)" class="px-2.5 py-1 rounded-full text-xs font-semibold border">
                   {{ order.status }}
                 </span>
               </td>
+
               <td class="px-6 py-4 text-center">
                 <router-link :to="'/detail/' + order.orderId" class="text-blue-600 hover:text-blue-800 font-bold text-xs">
                   Detail &rarr;

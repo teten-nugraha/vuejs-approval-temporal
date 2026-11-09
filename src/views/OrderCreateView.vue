@@ -12,27 +12,45 @@
       </div>
 
       <div>
-        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Pemohon</label>
+        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Pemohon (Requester Pertama)</label>
         <input :value="currentUser.name + ' (' + currentUser.role + ')'" disabled class="w-full bg-slate-100 border border-slate-300 rounded-lg p-2.5 text-sm text-slate-600">
       </div>
 
+      <!-- Tipe Pengajuan -->
       <div>
         <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Tipe Permohonan</label>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <label class="flex items-center p-3 border rounded-lg cursor-pointer" :class="form.type === 'BUY' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-300'">
-            <input type="radio" v-model="form.type" value="BUY" class="text-blue-600">
-            <span class="ml-2 font-semibold text-sm">BUY (Pembelian)</span>
+            <input type="radio" v-model="form.type" value="BUY" @change="onTypeChange" class="text-blue-600">
+            <span class="ml-2 font-semibold text-xs sm:text-sm">BUY Biasa</span>
           </label>
+
+          <label class="flex items-center p-3 border rounded-lg cursor-pointer transition" :class="form.type === 'BUY_LAMBORGHINI' ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-300' : 'border-slate-300'">
+            <input type="radio" v-model="form.type" value="BUY_LAMBORGHINI" @change="onTypeChange" class="text-amber-600">
+            <span class="ml-2 font-bold text-xs sm:text-sm text-amber-900">🏎️ LAMBORGHINI</span>
+          </label>
+
           <label class="flex items-center p-3 border rounded-lg cursor-pointer" :class="form.type === 'IJIN_CUTI' ? 'border-blue-600 bg-blue-50/50' : 'border-slate-300'">
-            <input type="radio" v-model="form.type" value="IJIN_CUTI" class="text-blue-600">
-            <span class="ml-2 font-semibold text-sm">Ijin Cuti</span>
+            <input type="radio" v-model="form.type" value="IJIN_CUTI" @change="onTypeChange" class="text-blue-600">
+            <span class="ml-2 font-semibold text-xs sm:text-sm">Ijin Cuti</span>
           </label>
         </div>
       </div>
 
-      <div v-if="form.type === 'BUY'">
-        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nominal (Rupiah)</label>
-        <input type="number" v-model.number="form.amount" min="1000" max="100000000" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500">
+      <!-- Input Nilai / Nominal -->
+      <div v-if="form.type === 'BUY' || form.type === 'BUY_LAMBORGHINI'">
+        <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nominal Pembelian (Rp)</label>
+        <input
+          type="number"
+          v-model.number="form.amount"
+          :readonly="form.type === 'BUY_LAMBORGHINI'"
+          required
+          class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+          :class="form.type === 'BUY_LAMBORGHINI' ? 'bg-amber-50 border-amber-300 text-amber-900 text-base' : ''"
+        >
+        <span v-if="form.type === 'BUY_LAMBORGHINI'" class="text-xs text-amber-700 font-semibold mt-1 block">
+          ⭐ Nilai otomatis ditetapkan: Rp 1.000.000.000 (1 Miliar Rupiah)
+        </span>
       </div>
 
       <div v-else>
@@ -46,24 +64,35 @@
       </div>
 
       <!-- Live Preview -->
-      <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-        <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Prediksi Alur Persetujuan:</span>
-        <div class="flex items-center gap-2 text-xs font-bold text-slate-700">
-          <span v-if="calculatedChain.length === 0" class="text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded">
-            ⚡ Otomatis Disetujui Sistem
-          </span>
-          <template v-else>
-            <span v-for="(role, idx) in calculatedChain" :key="role" class="flex items-center gap-2">
-              <span class="bg-white px-2.5 py-1 border border-slate-300 rounded">{{ idx + 1 }}. {{ role }}</span>
-              <span v-if="idx < calculatedChain.length - 1">&rarr;</span>
+      <div class="p-4 rounded-xl border" :class="form.type === 'BUY_LAMBORGHINI' ? 'bg-amber-50/70 border-amber-300' : 'bg-slate-50 border-slate-200'">
+        <span class="text-xs font-bold uppercase block mb-1" :class="form.type === 'BUY_LAMBORGHINI' ? 'text-amber-800' : 'text-slate-500'">
+          Prediksi Alur Workflow:
+        </span>
+        <div class="text-xs space-y-1">
+          <div class="font-bold text-slate-800">
+            <strong>Parent Workflow:</strong>
+            <span v-if="form.type === 'BUY_LAMBORGHINI'">
+              <span class="bg-white px-2 py-0.5 rounded border ml-1 font-mono">1. FINANCE</span> ➔
+              <span class="bg-white px-2 py-0.5 rounded border font-mono">2. CEO</span>
             </span>
-          </template>
+            <span v-else-if="form.type === 'BUY'">
+              {{ calculatedChain.length ? calculatedChain.join(' ➔ ') : 'Auto Approved' }}
+            </span>
+            <span v-else>
+              {{ form.days > 2 ? 'MANAGER' : 'Auto Approved' }}
+            </span>
+          </div>
+
+          <div v-if="form.type === 'BUY_LAMBORGHINI'" class="text-amber-900 font-bold pt-1">
+            ⚡ <strong>Child Workflow:</strong> Wajib Disetujui oleh <strong>2 Direktur Berbeda</strong> sebelum Parent dinyatakan selesai!
+          </div>
         </div>
       </div>
 
       <div class="flex justify-end gap-3 pt-3">
         <router-link to="/" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50">Batal</router-link>
-        <button type="submit" :disabled="submitting" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow transition disabled:opacity-50">
+        <button type="submit" :disabled="submitting" class="px-5 py-2 text-white rounded-lg text-sm font-semibold shadow transition disabled:opacity-50"
+          :class="form.type === 'BUY_LAMBORGHINI' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'">
           {{ submitting ? 'Memproses ke Temporal...' : 'Kirim Pengajuan' }}
         </button>
       </div>
@@ -72,34 +101,44 @@
 </template>
 
 <script setup>
-import { reactive, computed, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
 
-const props = defineProps({
-  currentUser: { type: Object, required: true }
-})
-
+const props = defineProps({ currentUser: { type: Object, required: true } })
 const router = useRouter()
 const submitting = ref(false)
 
 const form = reactive({
   orderId: 'ORD-' + Math.floor(100 + Math.random() * 900),
-  type: 'BUY',
-  amount: 5000000,
+  type: 'BUY_LAMBORGHINI',
+  amount: 1000000000,
   days: 1,
-  notes: ''
+  notes: 'Pengadaan unit Lamborghini Revuelto untuk operasional eksekutif.'
 })
+
+function onTypeChange() {
+  if (form.type === 'BUY_LAMBORGHINI') {
+    form.amount = 1000000000
+    form.notes = 'Pengadaan unit Lamborghini Revuelto untuk operasional eksekutif.'
+  } else if (form.type === 'BUY') {
+    form.amount = 5000000
+    form.notes = 'Pengadaan perlengkapan kantor.'
+  } else {
+    form.notes = 'Pengajuan cuti tahunan.'
+  }
+}
 
 const calculatedChain = computed(() => {
   if (form.type === 'IJIN_CUTI') {
     return form.days > 2 ? ['MANAGER'] : []
-  } else {
+  } else if (form.type === 'BUY') {
     const val = form.amount || 0
     if (val <= 1000000) return ['FINANCE']
     if (val <= 10000000) return ['FINANCE', 'DIRECTOR']
-    if (val <= 100000000) return ['FINANCE', 'DIRECTOR', 'CEO']
     return ['FINANCE', 'DIRECTOR', 'CEO']
+  } else {
+    return ['FINANCE', 'CEO']
   }
 })
 
@@ -108,15 +147,15 @@ async function handleSubmit() {
   try {
     await api.createOrder({
       orderId: form.orderId,
-      requesterId: props.currentUser.id, // <-- Gunakan .id (bukan .name)
+      requesterId: props.currentUser.id, // Menyimpan ID user pemohon
       type: form.type,
-      amount: form.type === 'BUY' ? form.amount : null,
+      amount: form.type !== 'IJIN_CUTI' ? form.amount : null,
       days: form.type === 'IJIN_CUTI' ? form.days : null,
       notes: form.notes
     })
     router.push('/detail/' + form.orderId)
   } catch (err) {
-    alert('Gagal: ' + err.message)
+    alert('Gagal: ' + (err.response?.data?.message || err.message))
   } finally {
     submitting.value = false
   }

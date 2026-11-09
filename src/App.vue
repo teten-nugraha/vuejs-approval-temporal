@@ -1,10 +1,10 @@
 <template>
   <div class="min-h-screen flex flex-col bg-slate-50">
-    <!-- Header -->
+    <!-- Header Sticky -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
       <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <router-link to="/" class="flex items-center gap-2">
-          <span class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold">A</span>
+          <span class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold shadow-sm">A</span>
           <div>
             <span class="font-bold text-slate-900 tracking-tight text-lg block leading-none">Approval Workflow</span>
             <span class="text-[10px] text-slate-500 font-medium">Temporal Engine + H2 Database</span>
@@ -13,11 +13,11 @@
 
         <!-- Role Simulator Switcher -->
         <div class="flex items-center gap-3">
-          <span class="text-xs text-slate-500 font-medium hidden sm:inline">Simulasi Login:</span>
+          <span class="text-xs text-slate-500 font-medium hidden sm:inline">Simulasi Akun:</span>
           <select
             v-model="currentUser"
             @change="updateActiveUser"
-            class="text-xs bg-slate-50 border border-slate-300 font-semibold text-slate-800 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500"
+            class="text-xs bg-slate-50 border border-slate-300 font-semibold text-slate-800 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
           >
             <option v-for="user in users" :key="user.id" :value="user">
               {{ user.name }} [{{ user.role }}]
@@ -38,7 +38,7 @@
 import { ref, onMounted } from 'vue'
 import api from './services/api'
 
-// Fallback daftar 2 orang per role
+// Fallback daftar akun multi-user (2 orang per role)
 const users = ref([
   { id: 'USR-EMP1', name: 'Budi Santoso', role: 'EMPLOYEE' },
   { id: 'USR-EMP2', name: 'Siti Rahma', role: 'EMPLOYEE' },

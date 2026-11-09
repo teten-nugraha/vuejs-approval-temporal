@@ -16,9 +16,9 @@
 
     <div v-else-if="order" class="space-y-6">
 
-      <!-- Stepper Tracking -->
+      <!-- Stepper Tracking Approval (Parent Workflow) -->
       <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h2 class="text-xs font-bold uppercase text-slate-400 mb-6">Tahapan Approval Berjenjang</h2>
+        <h2 class="text-xs font-bold uppercase text-slate-400 mb-6">Tahapan Approval Utama (Parent Workflow)</h2>
 
         <div v-if="order.status === 'CANCELLED'" class="p-4 bg-slate-100 border border-slate-200 rounded-lg text-center">
           <span class="text-xs font-bold text-slate-600 uppercase">Workflow Dihentikan (Dibatalkan oleh Pemohon)</span>
@@ -27,13 +27,11 @@
         <div v-else class="flex items-center justify-between relative px-4">
           <div class="absolute left-10 right-10 top-4 h-0.5 bg-slate-200 -z-0"></div>
 
-          <!-- Auto Approved Case -->
           <div v-if="!order.approvalChain || order.approvalChain.length === 0" class="mx-auto flex flex-col items-center bg-white px-4 relative z-10">
             <div class="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold">✓</div>
             <span class="text-xs font-bold mt-2">Auto Approved by System</span>
           </div>
 
-          <!-- Normal Chain -->
           <div
             v-for="(role, index) in order.approvalChain"
             :key="role"
@@ -43,13 +41,67 @@
               class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shadow transition"
               :class="getStepCircleClass(index)"
             >
-              <span v-if="index < order.currentStepIndex">✓</span>
+              <span v-if="index < order.currentStepIndex || order.status === 'APPROVED'">✓</span>
               <span v-else-if="index === order.currentStepIndex && order.status === 'REJECTED'">✕</span>
               <span v-else-if="index === order.currentStepIndex && order.status === 'IN_PROGRESS'">⏳</span>
               <span v-else>{{ index + 1 }}</span>
             </div>
             <span class="text-xs font-bold text-slate-800 mt-2">{{ role }}</span>
             <span class="text-[10px] font-semibold text-slate-400">{{ getStepStatusLabel(index) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KARTU KHUSUS CHILD WORKFLOW: LAMBORGHINI (2 DIREKTUR BERBEDA) -->
+      <div v-if="order.type === 'BUY_LAMBORGHINI'" class="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-xl p-6 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-amber-200 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">🏎️</span>
+            <div>
+              <h3 class="font-extrabold text-amber-950 text-base">Child Workflow: Pengadaan Supercar Lamborghini</h3>
+              <p class="text-xs text-amber-800">
+                Nilai: <strong>Rp 1.000.000.000</strong>. Parent Workflow tidak akan selesai sampai <strong>2 Direktur yang berbeda</strong> menyetujui.
+              </p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-full shadow-sm">
+            ID: CHILD-LAMBO-DIR-{{ order.orderId }}
+          </span>
+        </div>
+
+        <div class="p-3.5 bg-white/80 rounded-lg border border-amber-200 text-xs text-amber-950 flex items-center justify-between">
+          <div>
+            <span class="font-bold text-amber-900 uppercase block text-[10px] tracking-wide">Status Child Workflow</span>
+            <span class="font-semibold text-sm">{{ order.procurementNotes || 'Menunggu persetujuan dari 2 Direktur berbeda (0/2 Direktur disetujui).' }}</span>
+          </div>
+          <button @click="loadData" class="text-xs text-amber-800 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded font-bold transition">
+            🔄 Cek Progres Live
+          </button>
+        </div>
+
+        <!-- Tombol Aksi jika Login sebagai Role DIRECTOR -->
+        <div v-if="currentUser.role === 'DIRECTOR' && order.status !== 'CANCELLED' && order.status !== 'APPROVED'" class="p-4 bg-white rounded-lg border border-amber-300 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-800">
+              Hak Akses Direktur Terdeteksi: <strong>{{ currentUser.name }}</strong>
+            </span>
+            <span class="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-bold">Slot Direktur</span>
+          </div>
+          <div class="flex gap-2">
+            <button
+              @click="handleDirectorApproval(true)"
+              :disabled="actionLoading"
+              class="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center justify-center gap-1.5"
+            >
+              <span>✓</span> Setujui sebagai Direktur (Approve)
+            </button>
+            <button
+              @click="handleDirectorApproval(false)"
+              :disabled="actionLoading"
+              class="py-2.5 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg transition"
+            >
+              ✕ Tolak
+            </button>
           </div>
         </div>
       </div>
@@ -74,7 +126,9 @@
             <div>
               <span class="text-xs text-slate-400 block">Tipe & Nilai</span>
               <span class="font-bold text-slate-800">
-                {{ order.type === 'BUY' ? 'BUY (Rp ' + Number(order.amount).toLocaleString('id-ID') + ')' : order.days + ' Hari Cuti' }}
+                <span v-if="order.type === 'BUY_LAMBORGHINI'">🏎️ BUY_LAMBORGHINI (Rp 1.000.000.000)</span>
+                <span v-else-if="order.type === 'BUY'">BUY (Rp {{ Number(order.amount).toLocaleString('id-ID') }})</span>
+                <span v-else>{{ order.days }} Hari Cuti</span>
               </span>
             </div>
             <div>
@@ -94,7 +148,7 @@
             <p class="text-sm bg-slate-50 p-3 rounded-lg border text-slate-700">{{ order.notes }}</p>
           </div>
 
-          <!-- FITUR PEMBATALAN OLEH PEMOHON PERTAMA -->
+          <!-- AREA PEMBATALAN PEMOHON PERTAMA -->
           <div v-if="isRequester && order.status === 'IN_PROGRESS'" class="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between mt-4">
             <div>
               <h4 class="text-xs font-bold text-rose-800">Area Pemohon (Requester Actions)</h4>
@@ -135,13 +189,12 @@
             </p>
 
             <div v-if="order.status === 'CANCELLED'" class="p-3 bg-slate-50 border rounded-lg text-xs text-slate-500">
-              Pengajuan ini telah <strong>Dibatalkan</strong> oleh pemohon. Tidak ada tindakan lebih lanjut.
+              Pengajuan ini telah <strong>Dibatalkan</strong> oleh pemohon.
             </div>
 
-            <!-- Kondisi Belum di-Pick Me -->
             <div v-else-if="canPickMe" class="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
               <p class="text-xs text-amber-800 leading-relaxed">
-                Order menunggu persetujuan <strong>{{ order.waitingForRole }}</strong>. Lakukan Pick Me terlebih dahulu sebelum mengambil keputusan.
+                Order menunggu persetujuan <strong>{{ order.waitingForRole }}</strong>. Klik Pick Me terlebih dahulu sebelum mengambil keputusan.
               </p>
               <button
                 @click="handleClaim"
@@ -153,7 +206,6 @@
               </button>
             </div>
 
-            <!-- Kondisi Sudah di-Pick Me oleh User yang Login -->
             <div v-else-if="isClaimedByCurrentUser" class="space-y-3">
               <div class="flex items-center justify-between bg-indigo-50 border border-indigo-200 p-2.5 rounded-lg text-xs">
                 <span class="font-bold text-indigo-900">🔒 Anda pemegang order ini</span>
@@ -168,9 +220,8 @@
               </div>
             </div>
 
-            <!-- Kondisi Sudah di-Pick Me oleh Orang Lain -->
             <div v-else-if="isClaimedByOther" class="p-3 bg-slate-50 border rounded-lg text-xs text-slate-600 leading-relaxed">
-              ⚠️ Order sedang <strong>dikunci oleh {{ order.claimedByName }}</strong>. Anda tidak dapat melakukan keputusan.
+              ⚠️ Order sedang <strong>dikunci oleh {{ order.claimedByName }}</strong>.
             </div>
 
             <div v-else class="p-3 bg-slate-50 rounded-lg text-xs text-slate-500">
@@ -223,7 +274,7 @@ async function loadData() {
   }
 }
 
-// Cek apakah user saat ini adalah pemohon pertama
+// Cek hak akses pembatalan (pemohon pertama)
 const isRequester = computed(() => {
   if (!order.value || !props.currentUser) return false
   return order.value.requesterId === props.currentUser.id ||
@@ -247,7 +298,7 @@ const isClaimedByOther = computed(() => {
 })
 
 function getStepCircleClass(idx) {
-  if (idx < order.value.currentStepIndex) return 'bg-emerald-500 text-white'
+  if (idx < order.value.currentStepIndex || order.value.status === 'APPROVED') return 'bg-emerald-500 text-white'
   if (idx === order.value.currentStepIndex) {
     if (order.value.status === 'REJECTED') return 'bg-rose-500 text-white'
     return 'bg-amber-500 text-white ring-4 ring-amber-100 animate-pulse'
@@ -256,7 +307,7 @@ function getStepCircleClass(idx) {
 }
 
 function getStepStatusLabel(idx) {
-  if (idx < order.value.currentStepIndex) return 'Disetujui'
+  if (idx < order.value.currentStepIndex || order.value.status === 'APPROVED') return 'Disetujui'
   if (idx === order.value.currentStepIndex) {
     return order.value.status === 'REJECTED' ? 'Ditolak' : 'Menunggu'
   }
@@ -270,7 +321,7 @@ function statusBadge(status) {
   return 'bg-amber-50 text-amber-700 border-amber-200'
 }
 
-// Handle Cancel Pengajuan
+// Handle Cancel
 async function handleCancel() {
   const reason = prompt("Masukkan alasan pembatalan:")
   if (reason === null) return
@@ -279,6 +330,20 @@ async function handleCancel() {
   try {
     await api.cancelOrder(orderId, props.currentUser.id, reason || "Dibatalkan oleh pemohon")
     alert("Pengajuan berhasil dibatalkan.")
+    await loadData()
+  } catch (err) {
+    alert(err.response?.data?.error || err.message)
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+// Handle Persetujuan Direktur di Child Workflow
+async function handleDirectorApproval(approved) {
+  actionLoading.value = true
+  try {
+    await api.submitChildDirectorDecision(orderId, props.currentUser.id, approved, "Disetujui via slot Direktur")
+    alert("Persetujuan Direktur berhasil diproses ke Child Workflow.")
     await loadData()
   } catch (err) {
     alert(err.response?.data?.error || err.message)
